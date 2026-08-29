@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Karro — Mi lista de compra</title>
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Karro" />
+  <link rel="apple-touch-icon" href="./icon-180.svg" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+  <script>
+    if (localStorage.getItem("shopping-theme") === "dark") {
+      document.documentElement.classList.add("dark");
+    }
+  </script>
+</head>
+<body class="min-h-screen bg-white font-sans text-zinc-900 antialiased transition-colors duration-150 dark:bg-zinc-950 dark:text-zinc-100">
+  <main class="mx-auto min-h-screen w-full max-w-3xl px-5 py-10 sm:px-8 sm:py-16">
+    <header class="relative mb-10">
+      <button id="themeToggle" type="button" role="switch" aria-checked="false" aria-label="Activar modo oscuro" title="Activar modo oscuro" class="absolute right-0 top-0 flex shrink-0 items-center gap-1.5 rounded-full text-sm leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950">
+        <span aria-hidden="true" class="select-none">☀️</span>
+        <span id="themeToggleTrack" class="relative flex h-6 w-11 items-center rounded-full border border-zinc-200 bg-zinc-100 p-0.5 transition-colors duration-150 dark:border-zinc-700 dark:bg-zinc-800">
+          <span id="themeToggleThumb" class="h-5 w-5 translate-x-0.5 rounded-full border border-zinc-200 bg-white transition-transform duration-150 dark:border-zinc-600 dark:bg-zinc-100"></span>
+        </span>
+        <span aria-hidden="true" class="select-none">🌙</span>
+      </button>
+      <div class="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-400">
+        <span class="h-2 w-2 rounded-full bg-zinc-900 dark:bg-zinc-100"></span>
+        Karro
+      </div>
+      <div class="flex items-end justify-between gap-4 pr-2 sm:pr-20">
+        <div>
+          <h1 class="text-3xl font-semibold tracking-tight text-zinc-950 dark:text-white sm:text-4xl">Mi lista de compra</h1>
+          <p id="summary" class="mt-3 text-sm text-zinc-500 dark:text-zinc-400">Tu lista de la compra, fácil y sencilla</p>
+        </div>
+        <button id="clearList" type="button" class="hidden shrink-0 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-medium text-zinc-500 transition duration-150 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 dark:focus-visible:ring-offset-zinc-950">Borrar lista</button>
+      </div>
+    </header>
+
+    <form id="shoppingForm" class="mb-12">
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <label class="sr-only" for="itemInput">Añadir producto</label>
+        <input id="itemInput" type="text" autocomplete="off" placeholder="Añadir producto y pulsar Enter..." class="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition duration-150 placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:border-zinc-600 dark:focus:bg-zinc-900" required />
+        <label class="sr-only" for="categoryInput">Categoría</label>
+        <input id="categoryInput" type="text" list="categorySuggestions" autocomplete="off" placeholder="Categoría" class="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition duration-150 placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:border-zinc-600 dark:focus:bg-zinc-900 sm:w-40" />
+        <button type="submit" class="rounded-xl bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition duration-150 hover:bg-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200">Añadir</button>
+      </div>
+      <datalist id="categorySuggestions">
+        <option value="Frutas"></option>
+        <option value="Lácteos"></option>
+        <option value="Carnes"></option>
+        <option value="Limpieza"></option>
+        <option value="Panadería"></option>
+        <option value="Bebidas"></option>
+        <option value="Verduras"></option>
+        <option value="Congelados"></option>
+      </datalist>
+    </form>
+
+    <div id="completedActions" class="mb-4 hidden justify-end">
+      <button id="clearCompleted" type="button" class="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-medium text-zinc-500 transition duration-150 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 dark:focus-visible:ring-offset-zinc-950">Borrar tachados</button>
+    </div>
+
+    <section id="shoppingList" aria-live="polite"></section>
+    <div id="emptyState" class="hidden rounded-2xl border border-dashed border-zinc-200 px-6 py-14 text-center dark:border-zinc-800">
+      <p class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Tu lista está vacía</p>
+      <p class="mt-2 text-sm text-zinc-400">Añade un producto para comenzar.</p>
+    </div>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "shopping-list-items";
+    const form = document.getElementById("shoppingForm");
+    const itemInput = document.getElementById("itemInput");
+    const categoryInput = document.getElementById("categoryInput");
+    const shoppingList = document.getElementById("shoppingList");
+    const emptyState = document.getElementById("emptyState");
+    const clearCompletedButton = document.getElementById("clearCompleted");
+    const completedActions = document.getElementById("completedActions");
+    const clearListButton = document.getElementById("clearList");
+    const summary = document.getElementById("summary");
+    const themeToggle = document.getElementById("themeToggle");
+    const themeToggleThumb = document.getElementById("themeToggleThumb");
+    const THEME_KEY = "shopping-theme";
+
+    let items = loadItems();
+
+    function applyTheme(theme) {
+      const isDark = theme === "dark";
+      document.documentElement.classList.toggle("dark", isDark);
+      themeToggle.setAttribute("aria-checked", String(isDark));
+      themeToggle.setAttribute("aria-label", isDark ? "Activar modo claro" : "Activar modo oscuro");
+      themeToggle.title = isDark ? "Activar modo claro" : "Activar modo oscuro";
+      themeToggleThumb.classList.toggle("translate-x-5", isDark);
+      themeToggleThumb.classList.toggle("translate-x-0.5", !isDark);
+    }
+
+    function loadItems() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveItems() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function createId() {
+      return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function addItem(name, category) {
+      name = name.trim();
+      category = category.trim();
+      if (!name) return;
+      if (!category) category = "General";
+      items.unshift({ id: createId(), name, category, completed: false });
+      saveItems();
+      renderItems();
+    }
+
+    function toggleItem(id) {
+      items = items.map(item => item.id === id ? { ...item, completed: !item.completed } : item);
+      saveItems();
+      renderItems();
+    }
+
+    function deleteItem(id) {
+      items = items.filter(item => item.id !== id);
+      saveItems();
+      renderItems();
+    }
+
+    function clearCompleted() {
+      items = items.filter(item => !item.completed);
+      saveItems();
+      renderItems();
+    }
+
+    function clearList() {
+      if (!items.length) return;
+      if (!confirm("¿Quieres borrar toda la lista?")) return;
+      items = [];
+      saveItems();
+      renderItems();
+    }
+
+    function renderItems() {
+      shoppingList.innerHTML = "";
+      const completedCount = items.filter(item => item.completed).length;
+
+      completedActions.classList.toggle("hidden", completedCount === 0);
+      completedActions.classList.toggle("flex", completedCount > 0);
+      clearListButton.classList.toggle("hidden", items.length === 0);
+      emptyState.classList.toggle("hidden", items.length > 0);
+      shoppingList.classList.toggle("hidden", items.length === 0);
+      if (!items.length) return;
+
+      const groupedItems = items.reduce((groups, item) => {
+        if (!groups[item.category]) groups[item.category] = [];
+        groups[item.category].push(item);
+        return groups;
+      }, {});
+
+      Object.keys(groupedItems).sort((a, b) => a.localeCompare(b, "es")).forEach(category => {
+        const categorySection = document.createElement("section");
+        categorySection.className = "mb-8 last:mb-0";
+
+        const categoryHeader = document.createElement("div");
+        categoryHeader.className = "mb-3 flex items-center gap-3";
+        const categoryTitle = document.createElement("h2");
+        categoryTitle.className = "text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500";
+        categoryTitle.textContent = category;
+        const categoryLine = document.createElement("div");
+        categoryLine.className = "h-px flex-1 bg-zinc-100 dark:bg-zinc-800";
+        categoryHeader.append(categoryTitle, categoryLine);
+
+        const list = document.createElement("div");
+        list.className = "divide-y divide-zinc-100 rounded-xl border border-zinc-100 dark:divide-zinc-800 dark:border-zinc-800";
+
+        groupedItems[category].forEach(item => {
+          const row = document.createElement("div");
+          row.className = "group flex items-center gap-3 px-4 py-3 transition duration-150 hover:bg-zinc-50 dark:hover:bg-zinc-900/60";
+
+          const checkbox = document.createElement("button");
+          checkbox.type = "button";
+          checkbox.setAttribute("aria-label", item.completed ? "Marcar como pendiente" : "Marcar como completado");
+          checkbox.className = `flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 ${item.completed ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-950" : "border-zinc-300 bg-white hover:border-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:border-zinc-400"}`;
+          if (item.completed) {
+            checkbox.innerHTML = `<svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8 3 3 7-7"></path></svg>`;
+          }
+          checkbox.addEventListener("click", () => toggleItem(item.id));
+
+          const nameButton = document.createElement("button");
+          nameButton.type = "button";
+          nameButton.className = `min-w-0 flex-1 text-left text-sm transition duration-150 focus:outline-none focus-visible:text-zinc-500 ${item.completed ? "text-zinc-400 opacity-50 line-through dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`;
+          nameButton.textContent = item.name;
+          nameButton.addEventListener("click", () => toggleItem(item.id));
+
+          const deleteButton = document.createElement("button");
+          deleteButton.type = "button";
+          deleteButton.setAttribute("aria-label", `Eliminar ${item.name}`);
+          deleteButton.className = "rounded-md p-1 text-zinc-400 opacity-0 transition duration-150 hover:bg-zinc-200 hover:text-zinc-900 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 group-hover:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
+          deleteButton.innerHTML = `<svg viewBox="0 0 16 16" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m4 4 8 8M12 4 4 12"></path></svg>`;
+          deleteButton.addEventListener("click", () => deleteItem(item.id));
+
+          row.append(checkbox, nameButton, deleteButton);
+          list.appendChild(row);
+        });
+
+        categorySection.append(categoryHeader, list);
+        shoppingList.appendChild(categorySection);
+      });
+    }
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      addItem(itemInput.value, categoryInput.value);
+      itemInput.value = "";
+      categoryInput.value = "";
+      itemInput.focus();
+    });
+
+    clearCompletedButton.addEventListener("click", clearCompleted);
+    clearListButton.addEventListener("click", clearList);
+    themeToggle.addEventListener("click", () => {
+      const nextTheme = document.documentElement.classList.contains("dark") ? "light" : "dark";
+      localStorage.setItem(THEME_KEY, nextTheme);
+      applyTheme(nextTheme);
+    });
+
+    applyTheme(localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light");
+    renderItems();
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
