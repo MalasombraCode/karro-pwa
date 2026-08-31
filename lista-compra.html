@@ -99,6 +99,8 @@
     const THEME_KEY = "shopping-theme";
 
     let items = loadItems();
+    let selectedCategory = null;
+    let editingItemId = null;
 
     function applyTheme(theme) {
       const isDark = theme === "dark";
@@ -144,8 +146,114 @@
 
     function deleteItem(id) {
       items = items.filter(item => item.id !== id);
+      if (editingItemId === id) editingItemId = null;
       saveItems();
       renderItems();
+    }
+
+    function selectCategory(category) {
+      selectedCategory = selectedCategory === category ? null : category;
+      renderItems();
+    }
+
+    function addItemToCategory(category) {
+      categoryInput.value = category;
+      itemInput.focus();
+      itemInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function deleteCategory(category) {
+      const categoryItems = items.filter(item => item.category === category);
+      const message = categoryItems.length === 1
+        ? `¿Quieres eliminar la categoría "${category}" y su producto?`
+        : `¿Quieres eliminar la categoría "${category}" y sus ${categoryItems.length} productos?`;
+      if (!confirm(message)) return;
+      items = items.filter(item => item.category !== category);
+      selectedCategory = null;
+      editingItemId = null;
+      saveItems();
+      renderItems();
+    }
+
+    function startEditingItem(id) {
+      editingItemId = id;
+      renderItems();
+      setTimeout(() => document.querySelector(`[data-edit-name="${id}"]`)?.focus(), 0);
+    }
+
+    function cancelEditingItem() {
+      editingItemId = null;
+      renderItems();
+    }
+
+    function saveItemEdit(event, id) {
+      event.preventDefault();
+      const item = items.find(currentItem => currentItem.id === id);
+      if (!item) return;
+
+      const editForm = event.currentTarget;
+      const name = editForm.querySelector("[data-edit-name]").value.trim();
+      const category = editForm.querySelector("[data-edit-category]").value.trim() || "General";
+      if (!name) return;
+
+      item.name = name;
+      item.category = category;
+      editingItemId = null;
+      selectedCategory = category;
+      saveItems();
+      renderItems();
+    }
+
+    function createEditRow(item) {
+      const row = document.createElement("div");
+      row.className = "rounded-xl bg-zinc-50 p-4 dark:bg-zinc-900/70";
+
+      const editForm = document.createElement("form");
+      editForm.className = "flex flex-col gap-3 sm:flex-row sm:items-end";
+      editForm.addEventListener("submit", event => saveItemEdit(event, item.id));
+
+      const nameField = document.createElement("div");
+      nameField.className = "min-w-0 flex-1";
+      const nameLabel = document.createElement("label");
+      nameLabel.className = "mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400";
+      nameLabel.textContent = "Producto";
+      const nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.value = item.name;
+      nameInput.required = true;
+      nameInput.setAttribute("data-edit-name", item.id);
+      nameInput.className = "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100";
+      nameField.append(nameLabel, nameInput);
+
+      const categoryField = document.createElement("div");
+      categoryField.className = "sm:w-40";
+      const categoryLabel = document.createElement("label");
+      categoryLabel.className = "mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400";
+      categoryLabel.textContent = "Categoría";
+      const categoryInputEdit = document.createElement("input");
+      categoryInputEdit.type = "text";
+      categoryInputEdit.value = item.category;
+      categoryInputEdit.setAttribute("list", "categorySuggestions");
+      categoryInputEdit.setAttribute("data-edit-category", item.id);
+      categoryInputEdit.className = "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100";
+      categoryField.append(categoryLabel, categoryInputEdit);
+
+      const editActions = document.createElement("div");
+      editActions.className = "flex shrink-0 gap-2";
+      const saveButton = document.createElement("button");
+      saveButton.type = "submit";
+      saveButton.className = "rounded-lg bg-zinc-950 px-3 py-2 text-xs font-medium text-white hover:bg-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200";
+      saveButton.textContent = "Guardar";
+      const cancelButton = document.createElement("button");
+      cancelButton.type = "button";
+      cancelButton.className = "rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-500 hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-800";
+      cancelButton.textContent = "Cancelar";
+      cancelButton.addEventListener("click", cancelEditingItem);
+      editActions.append(saveButton, cancelButton);
+
+      editForm.append(nameField, categoryField, editActions);
+      row.appendChild(editForm);
+      return row;
     }
 
     function clearCompleted() {
@@ -179,23 +287,54 @@
         return groups;
       }, {});
 
-      Object.keys(groupedItems).sort((a, b) => a.localeCompare(b, "es")).forEach(category => {
+      Object.keys(groupedItems).sort((a, b) => a.localeCompare(b, "es")).forEach((category, categoryIndex) => {
         const categorySection = document.createElement("section");
         categorySection.className = "mb-8 last:mb-0";
 
         const categoryHeader = document.createElement("div");
-        categoryHeader.className = "mb-3 flex items-center gap-3";
-        const categoryTitle = document.createElement("h2");
-        categoryTitle.className = "text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500";
+        categoryHeader.className = "mb-3 flex flex-wrap items-center gap-3";
+        const categoryHeading = document.createElement("h2");
+        categoryHeading.className = "shrink-0";
+        const categoryTitle = document.createElement("button");
+        categoryTitle.type = "button";
+        categoryTitle.className = "text-left text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400 transition hover:text-zinc-700 focus:outline-none focus-visible:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 dark:focus-visible:text-zinc-300";
         categoryTitle.textContent = category;
+        categoryTitle.setAttribute("aria-expanded", String(selectedCategory === category));
+        categoryTitle.setAttribute("aria-controls", `category-actions-${categoryIndex}`);
+        categoryTitle.addEventListener("click", () => selectCategory(category));
+        categoryHeading.appendChild(categoryTitle);
         const categoryLine = document.createElement("div");
         categoryLine.className = "h-px flex-1 bg-zinc-100 dark:bg-zinc-800";
-        categoryHeader.append(categoryTitle, categoryLine);
+
+        const categoryActions = document.createElement("div");
+        categoryActions.id = `category-actions-${categoryIndex}`;
+        categoryActions.className = `${selectedCategory === category ? "flex" : "hidden"} shrink-0 items-center gap-2`;
+        const addCategoryButton = document.createElement("button");
+        addCategoryButton.type = "button";
+        addCategoryButton.className = "rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
+        addCategoryButton.setAttribute("aria-label", `Añadir artículo a ${category}`);
+        addCategoryButton.textContent = "+ Artículo";
+        addCategoryButton.addEventListener("click", () => addItemToCategory(category));
+
+        const deleteCategoryButton = document.createElement("button");
+        deleteCategoryButton.type = "button";
+        deleteCategoryButton.className = "rounded-md border-l border-zinc-200 pl-3 pr-1 py-1 text-xs font-medium text-zinc-400 transition hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-700 dark:text-zinc-500 dark:hover:text-red-400";
+        deleteCategoryButton.setAttribute("aria-label", `Eliminar categoría ${category}`);
+        deleteCategoryButton.textContent = "Eliminar";
+        deleteCategoryButton.addEventListener("click", () => deleteCategory(category));
+        categoryActions.append(addCategoryButton, deleteCategoryButton);
+
+        categoryHeader.append(categoryHeading, categoryLine, categoryActions);
 
         const list = document.createElement("div");
         list.className = "divide-y divide-zinc-100 rounded-xl border border-zinc-100 dark:divide-zinc-800 dark:border-zinc-800";
 
         groupedItems[category].forEach(item => {
+          if (editingItemId === item.id) {
+            list.appendChild(createEditRow(item));
+            return;
+          }
+
           const row = document.createElement("div");
           row.className = "group flex items-center gap-3 px-4 py-3 transition duration-150 hover:bg-zinc-50 dark:hover:bg-zinc-900/60";
 
@@ -214,14 +353,22 @@
           nameButton.textContent = item.name;
           nameButton.addEventListener("click", () => toggleItem(item.id));
 
+          const editButton = document.createElement("button");
+          editButton.type = "button";
+          editButton.setAttribute("aria-label", `Editar ${item.name}`);
+          editButton.title = "Editar producto";
+          editButton.className = "rounded-md p-1 text-zinc-400 opacity-60 transition duration-150 hover:bg-zinc-200 hover:text-zinc-900 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
+          editButton.innerHTML = `<svg viewBox="0 0 16 16" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m10.8 2.8 2.4 2.4M4 12l.6-2.7 6.4-6.4a1.7 1.7 0 0 1 2.4 2.4L7 11.7 4 12Z"></path></svg>`;
+          editButton.addEventListener("click", () => startEditingItem(item.id));
+
           const deleteButton = document.createElement("button");
           deleteButton.type = "button";
           deleteButton.setAttribute("aria-label", `Eliminar ${item.name}`);
-          deleteButton.className = "rounded-md p-1 text-zinc-400 opacity-0 transition duration-150 hover:bg-zinc-200 hover:text-zinc-900 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 group-hover:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
+          deleteButton.className = "rounded-md p-1 text-zinc-400 opacity-60 transition duration-150 hover:bg-zinc-200 hover:text-zinc-900 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
           deleteButton.innerHTML = `<svg viewBox="0 0 16 16" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m4 4 8 8M12 4 4 12"></path></svg>`;
           deleteButton.addEventListener("click", () => deleteItem(item.id));
 
-          row.append(checkbox, nameButton, deleteButton);
+          row.append(checkbox, nameButton, editButton, deleteButton);
           list.appendChild(row);
         });
 
