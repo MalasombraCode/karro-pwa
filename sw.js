@@ -1,4 +1,4 @@
-const CACHE_NAME = "karro-v2";
+const CACHE_NAME = "karro-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
